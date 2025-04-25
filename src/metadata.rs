@@ -165,21 +165,21 @@ pub struct Package {
     pub checksum: Checksum,
     pub location_href: String,
     pub location_base: Option<String>,
-    pub summary: String,
-    pub description: String,
-    pub packager: String,
-    pub url: String,
-    pub time_file: u64,
-    pub time_build: u64,
+    pub summary: Option<String>,
+    pub description: Option<String>,
+    pub packager: Option<String>,
+    pub url: Option<String>,
+    pub time_file: Option<u64>,
+    pub time_build: Option<u64>,
     pub size_package: u64,
     pub size_installed: u64,
-    pub size_archive: u64,
+    pub size_archive: Option<u64>,
 
     pub rpm_license: String,           // rpm:license
-    pub rpm_vendor: String,            // rpm:vendor
-    pub rpm_group: String,             // rpm:group
-    pub rpm_buildhost: String,         // rpm:buildhost
-    pub rpm_sourcerpm: String,         // rpm:sourcerpm
+    pub rpm_vendor: Option<String>,    // rpm:vendor
+    pub rpm_group: Option<String>,     // rpm:group
+    pub rpm_buildhost: Option<String>, // rpm:buildhost
+    pub rpm_sourcerpm: Option<String>, // rpm:sourcerpm
     pub rpm_header_range: HeaderRange, // rpm:header-range
 
     pub rpm_requires: Vec<Requirement>,    // rpm:provides
@@ -334,56 +334,56 @@ impl Package {
     }
 
     pub fn set_summary(&mut self, summary: impl Into<String>) -> &mut Self {
-        self.summary = summary.into();
+        self.summary = Some(summary.into());
         self
     }
 
-    pub fn summary(&self) -> &str {
-        &self.summary
+    pub fn summary(&self) -> Option<&str> {
+        self.summary.as_deref()
     }
 
     pub fn set_description(&mut self, description: impl Into<String>) -> &mut Self {
-        self.description = description.into();
+        self.description = Some(description.into());
         self
     }
 
-    pub fn description(&self) -> &str {
-        &self.description
+    pub fn description(&self) -> Option<&str> {
+        self.description.as_deref()
     }
 
     pub fn set_packager(&mut self, packager: impl Into<String>) -> &mut Self {
-        self.packager = packager.into();
+        self.packager = Some(packager.into());
         self
     }
 
-    pub fn packager(&self) -> &str {
-        &self.packager
+    pub fn packager(&self) -> Option<&str> {
+        self.packager.as_deref()
     }
 
     pub fn set_url(&mut self, url: impl Into<String>) -> &mut Self {
-        self.url = url.into();
+        self.url = Some(url.into());
         self
     }
 
-    pub fn url(&self) -> &str {
-        &self.url
+    pub fn url(&self) -> Option<&str> {
+        self.url.as_deref()
     }
 
     pub fn set_time_file(&mut self, time_file: u64) -> &mut Self {
-        self.time_file = time_file;
+        self.time_file = Some(time_file);
         self
     }
 
-    pub fn time_file(&self) -> u64 {
+    pub fn time_file(&self) -> Option<u64> {
         self.time_file
     }
 
     pub fn set_time_build(&mut self, time_build: u64) -> &mut Self {
-        self.time_build = time_build;
+        self.time_build = Some(time_build);
         self
     }
 
-    pub fn time_build(&self) -> u64 {
+    pub fn time_build(&self) -> Option<u64> {
         self.time_build
     }
 
@@ -406,11 +406,11 @@ impl Package {
     }
 
     pub fn set_size_archive(&mut self, size_archive: u64) -> &mut Self {
-        self.size_archive = size_archive;
+        self.size_archive = Some(size_archive);
         self
     }
 
-    pub fn size_archive(&self) -> u64 {
+    pub fn size_archive(&self) -> Option<u64> {
         self.size_archive
     }
 
@@ -424,39 +424,39 @@ impl Package {
     }
 
     pub fn set_rpm_vendor(&mut self, vendor: impl Into<String>) -> &mut Self {
-        self.rpm_vendor = vendor.into();
+        self.rpm_vendor = Some(vendor.into());
         self
     }
 
-    pub fn rpm_vendor(&self) -> &str {
-        &self.rpm_vendor
+    pub fn rpm_vendor(&self) -> Option<&str> {
+        self.rpm_vendor.as_deref()
     }
 
     pub fn set_rpm_group(&mut self, group: impl Into<String>) -> &mut Self {
-        self.rpm_group = group.into();
+        self.rpm_group = Some(group.into());
         self
     }
 
-    pub fn rpm_group(&self) -> &str {
-        &self.rpm_group
+    pub fn rpm_group(&self) -> Option<&str> {
+        self.rpm_group.as_deref()
     }
 
     pub fn set_rpm_buildhost(&mut self, rpm_buildhost: impl Into<String>) -> &mut Self {
-        self.rpm_buildhost = rpm_buildhost.into();
+        self.rpm_buildhost = Some(rpm_buildhost.into());
         self
     }
 
-    pub fn rpm_buildhost(&self) -> &str {
-        &self.rpm_buildhost
+    pub fn rpm_buildhost(&self) -> Option<&str> {
+        self.rpm_buildhost.as_deref()
     }
 
     pub fn set_rpm_sourcerpm(&mut self, rpm_sourcerpm: impl Into<String>) -> &mut Self {
-        self.rpm_sourcerpm = rpm_sourcerpm.into();
+        self.rpm_sourcerpm = Some(rpm_sourcerpm.into());
         self
     }
 
-    pub fn rpm_sourcerpm(&self) -> &str {
-        &self.rpm_sourcerpm
+    pub fn rpm_sourcerpm(&self) -> Option<&str> {
+        self.rpm_sourcerpm.as_deref()
     }
 
     pub fn set_rpm_header_range(&mut self, start: u64, end: u64) -> &mut Self {

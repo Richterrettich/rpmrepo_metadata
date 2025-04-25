@@ -495,30 +495,56 @@ pub fn write_package<W: Write>(
         .write_text_content(BytesText::from_plain_str(checksum_value))?;
 
     // <summary>A dummy package of horse</summary>
-    writer
-        .create_element(TAG_SUMMARY)
-        .write_text_content(BytesText::from_plain_str(package.summary()))?;
+    if let Some(summary) = package.summary() {
+        writer
+            .create_element(TAG_SUMMARY)
+            .write_text_content(BytesText::from_plain_str(summary))?;
+    } else {
+        writer.create_element(TAG_SUMMARY).write_empty()?;
+    }
 
     // <description>A dummy package of horse</description>
-    writer
-        .create_element(TAG_DESCRIPTION)
-        .write_text_content(BytesText::from_plain_str(package.description()))?;
+    if let Some(description) = package.description() {
+        writer
+            .create_element(TAG_DESCRIPTION)
+            .write_text_content(BytesText::from_plain_str(description))?;
+    } else {
+        writer.create_element(TAG_DESCRIPTION).write_empty()?;
+    }
 
     // <packager>Bojack Horseman</packager>
-    writer
-        .create_element(TAG_PACKAGER)
-        .write_text_content(BytesText::from_plain_str(package.packager()))?;
+    if let Some(packager) = package.packager() {
+        writer
+            .create_element(TAG_PACKAGER)
+            .write_text_content(BytesText::from_plain_str(packager))?;
+    } else {
+        writer.create_element(TAG_PACKAGER).write_empty()?;
+    }
 
     // <url>http://arandomaddress.com</url>
-    writer
-        .create_element(TAG_URL)
-        .write_text_content(BytesText::from_plain_str(package.url()))?;
+    if let Some(url) = package.url() {
+        writer
+            .create_element(TAG_URL)
+            .write_text_content(BytesText::from_plain_str(url))?;
+    } else {
+        writer.create_element(TAG_URL).write_empty()?;
+    }
 
     // <time file="1615451135" build="1331831374"/>
     writer
         .create_element(TAG_TIME)
-        .with_attribute(("file", package.time_file().to_string().as_str()))
-        .with_attribute(("build", package.time_build().to_string().as_str()))
+        .with_attribute((
+            "file",
+            package.time_file().unwrap_or_default().to_string().as_str(),
+        ))
+        .with_attribute((
+            "build",
+            package
+                .time_build()
+                .unwrap_or_default()
+                .to_string()
+                .as_str(),
+        ))
         .write_empty()?;
 
     // <size package="1846" installed="42" archive="296"/>
@@ -526,7 +552,14 @@ pub fn write_package<W: Write>(
         .create_element(TAG_SIZE)
         .with_attribute(("package", package.size_package().to_string().as_str()))
         .with_attribute(("installed", package.size_installed().to_string().as_str()))
-        .with_attribute(("archive", package.size_archive().to_string().as_str()))
+        .with_attribute((
+            "archive",
+            package
+                .size_archive()
+                .unwrap_or_default()
+                .to_string()
+                .as_str(),
+        ))
         .write_empty()?;
 
     // <location href="horse-4.1-1.noarch.rpm"/>
@@ -545,24 +578,36 @@ pub fn write_package<W: Write>(
         .write_text_content(BytesText::from_plain_str(package.rpm_license()))?;
 
     // <rpm:vendor></rpm:vendor>
-    writer
-        .create_element(TAG_RPM_VENDOR)
-        .write_text_content(BytesText::from_plain_str(package.rpm_vendor()))?;
+    if let Some(vendor) = package.rpm_vendor() {
+        writer
+            .create_element(TAG_RPM_VENDOR)
+            .write_text_content(BytesText::from_plain_str(vendor))?;
+    } else {
+        writer.create_element(TAG_RPM_VENDOR).write_empty()?;
+    }
 
     // <rpm:group>Internet/Applications</rpm:group>
     writer
         .create_element(TAG_RPM_GROUP)
-        .write_text_content(BytesText::from_plain_str(&package.rpm_group()))?;
+        .write_text_content(BytesText::from_plain_str(
+            &package.rpm_group().unwrap_or_else(|| "Unspecified"),
+        ))?;
 
     // <rpm:buildhost>smqe-ws15</rpm:buildhost>
-    writer
-        .create_element(TAG_RPM_BUILDHOST)
-        .write_text_content(BytesText::from_plain_str(&package.rpm_buildhost()))?;
+    if let Some(buildhost) = package.rpm_buildhost() {
+        writer
+            .create_element(TAG_RPM_BUILDHOST)
+            .write_text_content(BytesText::from_plain_str(buildhost))?;
+    } else {
+        writer.create_element(TAG_RPM_BUILDHOST).write_empty()?;
+    }
 
     // <rpm:sourcerpm>horse-4.1-1.src.rpm</rpm:sourcerpm>
     writer
         .create_element(TAG_RPM_SOURCERPM)
-        .write_text_content(BytesText::from_plain_str(&package.rpm_sourcerpm()))?;
+        .write_text_content(BytesText::from_plain_str(
+            &package.rpm_sourcerpm().unwrap_or_else(|| "(none)"),
+        ))?;
 
     // <rpm:header-range start="280" end="1697"/>
     let header_start = package.rpm_header_range().start.to_string();

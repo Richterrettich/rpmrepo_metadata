@@ -133,24 +133,22 @@ pub mod rpm_parsing {
             pkg.get_arch()?
         };
 
-        // TODO: handle tags that aren't guaranteed to exist
-        // like url, description, time_build, group, etc.
         pkg_metadata.set_arch(arch);
         pkg_metadata.set_epoch(pkg.get_epoch().unwrap_or(0));
         pkg_metadata.set_version(pkg.get_version()?);
         pkg_metadata.set_release(pkg.get_release()?);
 
-        pkg_metadata.set_summary(pkg.get_summary()?);
-        pkg_metadata.set_description(pkg.get_description()?);
-        pkg_metadata.set_packager(pkg.get_packager()?);
-        pkg_metadata.set_url(pkg.get_url()?);
-        pkg_metadata.set_description(pkg.get_description()?);
-        pkg_metadata.set_time_build(pkg.get_build_time()?);
+        pkg_metadata.summary = pkg.get_summary().ok().map(From::from);
+        pkg_metadata.description = pkg.get_description().ok().map(From::from);
+        pkg_metadata.packager = pkg.get_packager().ok().map(From::from);
+        pkg_metadata.url = pkg.get_url().ok().map(From::from);
+        pkg_metadata.description = pkg.get_description().ok().map(From::from);
+        pkg_metadata.set_time_build(pkg.get_build_time().unwrap_or_default());
         pkg_metadata.set_rpm_license(pkg.get_license()?);
-        pkg_metadata.set_rpm_vendor(pkg.get_vendor()?);
-        pkg_metadata.set_rpm_group(pkg.get_group()?);
-        pkg_metadata.set_rpm_buildhost(pkg.get_build_host()?);
-        pkg_metadata.set_rpm_sourcerpm(pkg.get_source_rpm()?);
+        pkg_metadata.rpm_vendor = pkg.get_vendor().ok().map(From::from);
+        pkg_metadata.rpm_group = pkg.get_group().ok().map(From::from);
+        pkg_metadata.rpm_buildhost = pkg.get_build_host().ok().map(From::from);
+        pkg_metadata.rpm_sourcerpm = pkg.get_source_rpm().ok().map(From::from);
 
         let archive_size = pkg
             .signature
