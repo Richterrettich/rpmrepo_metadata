@@ -37,3 +37,4 @@ venv
 
 # package building
 **/*.crate
+.vscode
