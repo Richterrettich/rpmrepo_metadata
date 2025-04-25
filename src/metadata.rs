@@ -16,6 +16,7 @@ use quick_xml;
 use quick_xml::{Reader, Writer};
 #[cfg(feature = "read_rpm")]
 use rpm;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{utils, Repository, EVR};
@@ -156,7 +157,7 @@ impl TryInto<CompressionType> for &str {
 //     }
 // }
 
-#[derive(Clone, Default, Debug, PartialEq, Hash)]
+#[derive(Clone, Default, Debug, PartialEq, Hash, Serialize, Deserialize)]
 pub struct Package {
     // pub(crate) parse_state: ParseState,
     pub name: String,
@@ -594,7 +595,7 @@ impl Default for ChecksumType {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Checksum {
     Md5(String),
     Sha1(String),
@@ -737,21 +738,21 @@ impl Checksum {
     }
 }
 
-#[derive(Clone, Debug, Default, Hash, PartialEq)]
+#[derive(Clone, Debug, Default, Hash, PartialEq, Serialize, Deserialize)]
 pub struct Changelog {
     pub author: String,
     pub timestamp: u64,
     pub description: String,
 }
 
-#[derive(Copy, Clone, Debug, Default, Hash, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Hash, PartialEq, Serialize, Deserialize)]
 pub struct HeaderRange {
     pub start: u64,
     pub end: u64,
 }
 
 // Requirement (Provides, Conflicts, Obsoletes, Requires).
-#[derive(Clone, Debug, Default, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Requirement {
     pub name: String,
     pub flags: Option<String>,
@@ -799,7 +800,7 @@ impl TryFrom<&str> for RequirementType {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Hash, Serialize, Deserialize)]
 pub enum FileType {
     File,
     Dir,
@@ -833,7 +834,7 @@ impl Default for FileType {
     }
 }
 
-#[derive(Clone, Debug, Default, Hash, PartialEq)]
+#[derive(Clone, Debug, Default, Hash, PartialEq, Serialize, Deserialize)]
 pub struct PackageFile {
     pub filetype: FileType,
     pub path: String,

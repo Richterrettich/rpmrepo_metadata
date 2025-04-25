@@ -1,0 +1,72 @@
+{
+    "name": "foo",
+    "arch": "aarch64",
+    "evr": {
+        "epoch": "1",
+        "version": "1.0.0",
+        "release": "1"
+    },
+    "checksum": {
+        "Sha256": "c9a54241892bfaae9ca7cb3ce6cc7a990743bfd9c2fc25821dfc6b9c630d1471"
+    },
+    "location_href": "/tmp/test_serde.HNgIPphn1c8T/test.rpm",
+    "summary": "some package",
+    "description": "some package",
+    "time_file": 1745585013,
+    "time_build": 1745585013,
+    "size_package": 2081,
+    "size_installed": 146,
+    "rpm_license": "MIT",
+    "rpm_header_range": {
+        "start": 232,
+        "end": 1665
+    },
+    "rpm_requires": [
+        {
+            "name": "foo",
+            "preinstall": false
+        }
+    ],
+    "rpm_provides": [
+        {
+            "name": "foo",
+            "flags": "EQ",
+            "epoch": "0",
+            "version": "1.0.0",
+            "preinstall": false
+        },
+        {
+            "name": "foo(aarch64)",
+            "flags": "EQ",
+            "epoch": "0",
+            "version": "1.0.0",
+            "preinstall": false
+        }
+    ],
+    "rpm_conflicts": [
+        {
+            "name": "bazz",
+            "flags": "EQ",
+            "epoch": "0",
+            "version": "3.0.0",
+            "preinstall": false
+        }
+    ],
+    "rpm_obsoletes": [
+        {
+            "name": "bar",
+            "preinstall": false
+        }
+    ],
+    "rpm_suggests": [],
+    "rpm_enhances": [],
+    "rpm_recommends": [],
+    "rpm_supplements": [],
+    "rpm_changelogs": [],
+    "rpm_files": [
+        {
+            "filetype": "File",
+            "path": "/etc/complex_repo_pkglist.txt"
+        }
+    ]
+}
