@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::collections::BTreeSet;
 use std::convert::TryInto;
 use std::hash::{Hash, Hasher};
 use std::io::{BufRead, Write};
@@ -761,6 +762,7 @@ pub struct Requirement {
     pub release: Option<String>,
     pub preinstall: bool,
 }
+
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq)]
 pub enum RequirementType {

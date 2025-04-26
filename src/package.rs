@@ -13,9 +13,11 @@ use crate::other::OtherXmlReader;
 use crate::primary::PrimaryXmlReader;
 use crate::{utils, RepomdData};
 use crate::{FilelistsXml, MetadataError, OtherXml, Package, PrimaryXml};
+use std::cmp::Ord;
 
 #[cfg(feature = "read_rpm")]
 pub mod rpm_parsing {
+    use std::collections::BTreeSet;
     use std::time::SystemTime;
     use std::{collections::HashSet, fs::File};
 
@@ -171,7 +173,9 @@ pub mod rpm_parsing {
                 }
                 out.insert(r.try_into()?);
             }
-            Ok(out.into_iter().collect())
+            let mut out = out.into_iter().collect::<Vec<Requirement>>();
+            out.sort_by(|a, b| (&a.name).cmp(&b.name));
+            Ok(out)
         }
         // todo: only apply rpmlib filter to requires
         // todo: deduplicate requires with provides, remove provided deps from requires
