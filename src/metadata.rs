@@ -739,7 +739,7 @@ impl Checksum {
     }
 }
 
-#[derive(Clone, Debug, Default, Hash, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Hash, PartialEq, Serialize, Deserialize, Eq)]
 pub struct Changelog {
     pub author: String,
     pub timestamp: u64,
@@ -801,7 +801,7 @@ impl TryFrom<&str> for RequirementType {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Hash, Serialize, Deserialize, Eq)]
 pub enum FileType {
     File,
     Dir,
@@ -835,7 +835,7 @@ impl Default for FileType {
     }
 }
 
-#[derive(Clone, Debug, Default, Hash, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Hash, PartialEq, Serialize, Deserialize, Eq)]
 pub struct PackageFile {
     pub filetype: FileType,
     pub path: String,
