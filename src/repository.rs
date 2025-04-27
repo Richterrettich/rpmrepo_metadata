@@ -373,22 +373,6 @@ impl RepositoryWriter {
             self.num_pkgs_written, self.num_pkgs
         );
 
-        // TODO: this is a mess
-        let path = self.path.clone();
-        let repodata_dir = self.path.join("repodata");
-        let primary_path = utils::apply_compression_suffix(
-            &PathBuf::from("repodata").join("primary.xml"),
-            self.options.metadata_compression_type,
-        );
-        let filelists_path = utils::apply_compression_suffix(
-            &PathBuf::from("repodata").join("filelists.xml"),
-            self.options.metadata_compression_type,
-        );
-        let other_path = utils::apply_compression_suffix(
-            &PathBuf::from("repodata").join("other.xml"),
-            self.options.metadata_compression_type,
-        );
-
         self.primary_xml_writer.as_mut().unwrap().finish()?;
         self.filelists_xml_writer.as_mut().unwrap().finish()?;
         self.other_xml_writer.as_mut().unwrap().finish()?;
@@ -402,42 +386,38 @@ impl RepositoryWriter {
         drop(self.filelists_xml_writer.take());
         drop(self.other_xml_writer.take());
 
-        let primary_xml = RepomdRecord::new(
-            "primary",
-            &primary_path.as_ref(),
-            &path,
-            self.options.metadata_checksum_type,
-        )?;
-        self.repomd_mut().add_record(primary_xml);
-        let filelists_xml = RepomdRecord::new(
-            "filelists",
-            &filelists_path.as_ref(),
-            &path,
-            self.options.metadata_checksum_type,
-        )?;
-        self.repomd_mut().add_record(filelists_xml);
-        let other_xml = RepomdRecord::new(
-            "other",
-            &other_path.as_ref(),
-            &path,
-            self.options.metadata_checksum_type,
-        )?;
-        self.repomd_mut().add_record(other_xml);
+        let path = self.path.clone();
+        let repodata_dir = self.path.join("repodata");
+        // these three are always present
+        let mut files = vec!["primary", "filelists", "other"];
 
         if let Some(updateinfo_xml_writer) = &mut self.updateinfo_xml_writer {
             updateinfo_xml_writer.finish()?;
             self.updateinfo_xml_writer = None;
-            let updateinfo_path = utils::apply_compression_suffix(
-                &PathBuf::from("repodata").join("updateinfo.xml"),
+            files.push("updateinfo");
+        }
+
+        for name in files {
+            let href = utils::apply_compression_suffix(
+                &PathBuf::from("repodata").join(format!("{name}.xml")),
                 self.options.metadata_compression_type,
             );
-            let updateinfo_xml = RepomdRecord::new(
-                "updateinfo",
-                &updateinfo_path.as_ref(),
-                &path,
-                self.options.metadata_checksum_type,
-            )?;
-            self.repomd_mut().add_record(updateinfo_xml);
+            let mut record =
+                RepomdRecord::new(name, &href, &path, self.options.metadata_checksum_type)?;
+            let old_filename = href.file_name().unwrap().to_string_lossy();
+            if !self.options.simple_metadata_filenames {
+                record.location_href.set_file_name(format!(
+                    "{}-{}",
+                    record.checksum.to_values()?.1,
+                    old_filename
+                ));
+                let from = path.join(href);
+                let to = path.join(&record.location_href);
+                std::fs::rename(from, to)?;
+            }
+
+            record.checksum.to_values()?.1;
+            self.repomd_mut().add_record(record);
         }
 
         let (_, mut repomd_writer) =
