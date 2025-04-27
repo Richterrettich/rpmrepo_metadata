@@ -245,12 +245,26 @@ pub mod rpm_parsing {
         pkg_metadata.set_recommends(convert_deps(pkg.get_recommends()?, remove_pre_flag)?);
         pkg_metadata.set_supplements(convert_deps(pkg.get_supplements()?, remove_pre_flag)?);
 
-        // todo: restrict number
         let mut changelogs: Vec<Changelog> = Vec::new();
         for f in pkg.get_changelog_entries()?.into_iter() {
             changelogs.push(f.into())
         }
         changelogs.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
+        /*
+        limit to only 10 to make it compatible with createrepo_c
+        original source: https://github.com/rpm-software-management/createrepo_c/blob/70e92f6a802059f1f8d003299cea925e838745b1/src/cmd_parser.h#L27
+        #define DEFAULT_CHANGELOG_LIMIT         10
+         */
+        let changelog_limit = 10;
+        let changelog_size = changelogs.len();
+        let changelogs = if changelog_size > changelog_limit {
+            changelogs
+                .into_iter()
+                .skip(changelog_size - changelog_limit)
+                .collect()
+        } else {
+            changelogs
+        };
         pkg_metadata.set_changelogs(changelogs);
 
         // todo: filter files
