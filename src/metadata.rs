@@ -763,7 +763,6 @@ pub struct Requirement {
     pub preinstall: bool,
 }
 
-
 #[derive(Copy, Clone, Debug, Hash, PartialEq)]
 pub enum RequirementType {
     LT,

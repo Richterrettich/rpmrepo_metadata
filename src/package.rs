@@ -25,7 +25,7 @@ pub mod rpm_parsing {
     use crate::{Changelog, ChecksumType, PackageFile, Requirement, EVR};
 
     use super::*;
-    use rpm;
+    use rpm::{self, Dependency};
 
     impl TryFrom<rpm::Dependency> for Requirement {
         type Error = MetadataError;
@@ -179,50 +179,61 @@ pub mod rpm_parsing {
 
         fn convert_deps(
             requirements: Vec<rpm::Dependency>,
+            mut callback: impl FnMut(Dependency) -> Result<Option<Requirement>, MetadataError>,
         ) -> Result<Vec<Requirement>, MetadataError> {
             let mut out = HashSet::new();
-            let mut current_libc_version = LibcVersion::default();
-            let mut libc_requirement: Option<Requirement> = None;
             for r in requirements.into_iter() {
-                if r.name.starts_with("rpmlib(") {
-                    continue;
+                let requirement = callback(r)?;
+                if let Some(req) = requirement {
+                    out.insert(req);
                 }
-                if r.name.starts_with("libc.so") {
-                    if let Some(version) = parse_glibc_req_version(&r.name[..]) {
-                        if version < current_libc_version {
-                            continue;
-                        }
-                        current_libc_version = version;
-                        libc_requirement = Some(r.try_into()?);
-                    }
-                } else {
-                    out.insert(r.try_into()?);
-                }
-            }
-            if let Some(req) = libc_requirement {
-                out.insert(req);
             }
             let mut out = out.into_iter().collect::<Vec<Requirement>>();
             out.sort_by(|a, b| (&a.name).cmp(&b.name));
             Ok(out)
         }
 
-        pkg_metadata.set_provides(convert_deps(pkg.get_provides()?)?);
-        let requires = convert_deps(pkg.get_requires()?)?;
+        let mut libc_requirement: Option<Requirement> = None;
+        let mut current_libc_version = LibcVersion::default();
+        fn remove_pre_flag(dep: Dependency) -> Result<Option<Requirement>, MetadataError> {
+            let mut result: Requirement = dep.try_into()?;
+            result.preinstall = false;
+            Ok(Some(result))
+        }
+        pkg_metadata.set_provides(convert_deps(pkg.get_provides()?, remove_pre_flag)?);
+        let mut requires = convert_deps(pkg.get_requires()?, |dep: Dependency| {
+            if dep.name.starts_with("rpmlib(") {
+                return Ok(None);
+            }
+            if dep.name.starts_with("libc.so") {
+                if let Some(version) = parse_glibc_req_version(&dep.name[..]) {
+                    if version < current_libc_version {
+                        return Ok(None);
+                    }
+                    current_libc_version = version;
+                    libc_requirement = Some(dep.try_into()?);
+                }
+                return Ok(None);
+            }
+            let req = dep.try_into()?;
+            // deduplicate the provides values from requires
+            if pkg_metadata.provides().contains(&req) {
+                return Ok(None);
+            }
+            Ok(Some(req))
+        })?;
+        // insert glibc requirement last since we have filtered out the redundant entries
+        if let Some(req) = libc_requirement {
+            requires.push(req);
+        }
 
-        pkg_metadata.set_requires(
-            requires
-                .into_iter()
-                .filter(|req| !pkg_metadata.provides().contains(req))
-                .collect(),
-        );
-        pkg_metadata.set_provides(convert_deps(pkg.get_provides()?)?);
-        pkg_metadata.set_conflicts(convert_deps(pkg.get_conflicts()?)?);
-        pkg_metadata.set_obsoletes(convert_deps(pkg.get_obsoletes()?)?);
-        pkg_metadata.set_suggests(convert_deps(pkg.get_suggests()?)?);
-        pkg_metadata.set_enhances(convert_deps(pkg.get_enhances()?)?);
-        pkg_metadata.set_recommends(convert_deps(pkg.get_recommends()?)?);
-        pkg_metadata.set_supplements(convert_deps(pkg.get_supplements()?)?);
+        pkg_metadata.set_requires(requires);
+        pkg_metadata.set_conflicts(convert_deps(pkg.get_conflicts()?, remove_pre_flag)?);
+        pkg_metadata.set_obsoletes(convert_deps(pkg.get_obsoletes()?, remove_pre_flag)?);
+        pkg_metadata.set_suggests(convert_deps(pkg.get_suggests()?, remove_pre_flag)?);
+        pkg_metadata.set_enhances(convert_deps(pkg.get_enhances()?, remove_pre_flag)?);
+        pkg_metadata.set_recommends(convert_deps(pkg.get_recommends()?, remove_pre_flag)?);
+        pkg_metadata.set_supplements(convert_deps(pkg.get_supplements()?, remove_pre_flag)?);
 
         // todo: restrict number
         let mut changelogs: Vec<Changelog> = Vec::new();
@@ -328,7 +339,10 @@ pub mod rpm_parsing {
 
         #[test]
         fn test_parse_libc_version() {
-            for (raw, expected) in [("libc.so.6(GLIBC_2.38)(64bit)", LibcVersion::new(2, 38, 0))] {
+            for (raw, expected) in [
+                ("libc.so.6(GLIBC_2.38)(64bit)", LibcVersion::new(2, 38, 0)),
+                ("libc.so.6()(64bit)", LibcVersion::default()),
+            ] {
                 let actual = parse_glibc_req_version(raw).unwrap_or_default();
                 assert_eq!(expected, actual)
             }
