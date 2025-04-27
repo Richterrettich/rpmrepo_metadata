@@ -17,6 +17,7 @@ use std::cmp::Ord;
 
 #[cfg(feature = "read_rpm")]
 pub mod rpm_parsing {
+    use std::cmp::Ordering;
     use std::collections::BTreeSet;
     use std::time::SystemTime;
     use std::{collections::HashSet, fs::File};
@@ -167,19 +168,41 @@ pub mod rpm_parsing {
             requirements: Vec<rpm::Dependency>,
         ) -> Result<Vec<Requirement>, MetadataError> {
             let mut out = HashSet::new();
+            let mut current_libc_version = LibcVersion::default();
+            let mut libc_requirement: Option<Requirement> = None;
             for r in requirements.into_iter() {
                 if r.name.starts_with("rpmlib(") {
                     continue;
                 }
-                out.insert(r.try_into()?);
+                if r.name.starts_with("libc.so") {
+                    if let Some(version) = parse_glibc_req_version(&r.name[..]) {
+                        if version < current_libc_version {
+                            continue;
+                        }
+                        current_libc_version = version;
+                        libc_requirement = Some(r.try_into()?);
+                    }
+                } else {
+                    out.insert(r.try_into()?);
+                }
+            }
+            if let Some(req) = libc_requirement {
+                out.insert(req);
             }
             let mut out = out.into_iter().collect::<Vec<Requirement>>();
             out.sort_by(|a, b| (&a.name).cmp(&b.name));
             Ok(out)
         }
-        // todo: only apply rpmlib filter to requires
-        // todo: deduplicate requires with provides, remove provided deps from requires
-        pkg_metadata.set_requires(convert_deps(pkg.get_requires()?)?);
+
+        pkg_metadata.set_provides(convert_deps(pkg.get_provides()?)?);
+        let requires = convert_deps(pkg.get_requires()?)?;
+
+        pkg_metadata.set_requires(
+            requires
+                .into_iter()
+                .filter(|req| !pkg_metadata.provides().contains(req))
+                .collect(),
+        );
         pkg_metadata.set_provides(convert_deps(pkg.get_provides()?)?);
         pkg_metadata.set_conflicts(convert_deps(pkg.get_conflicts()?)?);
         pkg_metadata.set_obsoletes(convert_deps(pkg.get_obsoletes()?)?);
@@ -220,6 +243,127 @@ pub mod rpm_parsing {
         pkg_metadata.set_rpm_header_range(offsets.header, offsets.payload);
 
         Ok(pkg_metadata)
+    }
+
+    fn parse_glibc_req_version(input: &str) -> Option<LibcVersion> {
+        if let Some(first) = input.split(")").next() {
+            let raw_version = first.split("(").skip(1).next();
+            if raw_version.is_none() {
+                return None;
+            }
+            if let Some((_, version_str)) = raw_version.unwrap().split_once("_") {
+                let mut parts = version_str.split(".");
+                return Some(LibcVersion {
+                    major: parts
+                        .next()
+                        .map(|item| item.parse().unwrap_or_default())
+                        .unwrap_or_default(),
+                    minor: parts
+                        .next()
+                        .map(|item| item.parse().unwrap_or_default())
+                        .unwrap_or_default(),
+                    patch: parts
+                        .next()
+                        .map(|item| item.parse().unwrap_or_default())
+                        .unwrap_or_default(),
+                });
+            } else {
+                return None;
+            }
+        }
+        None
+    }
+    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Default)]
+    struct LibcVersion {
+        major: u32,
+        minor: u32,
+        patch: u32,
+    }
+
+    impl LibcVersion {
+        fn new(major: u32, minor: u32, patch: u32) -> Self {
+            Self {
+                major,
+                minor,
+                patch,
+            }
+        }
+    }
+
+    impl std::cmp::Ord for LibcVersion {
+        fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+            if self.major == other.major && self.minor == other.minor && self.patch == other.patch {
+                return Ordering::Equal;
+            }
+            if self.major > other.major
+                || (self.major == other.major && self.minor > other.minor)
+                || (self.major == other.major
+                    && self.minor == other.minor
+                    && self.patch > other.patch)
+            {
+                return Ordering::Greater;
+            }
+            return Ordering::Less;
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use std::cmp::Ordering;
+
+        use super::{parse_glibc_req_version, LibcVersion};
+
+        #[test]
+        fn test_parse_libc_version() {
+            for (raw, expected) in [("libc.so.6(GLIBC_2.38)(64bit)", LibcVersion::new(2, 38, 0))] {
+                let actual = parse_glibc_req_version(raw).unwrap_or_default();
+                assert_eq!(expected, actual)
+            }
+        }
+
+        #[test]
+        fn test_version_compare() {
+            for (a, b, expected) in [
+                (
+                    LibcVersion::new(2, 0, 0),
+                    LibcVersion::new(1, 123123123, 123123123),
+                    Ordering::Greater,
+                ),
+                (
+                    LibcVersion::new(1, 123, 0),
+                    LibcVersion::new(1, 0, 0),
+                    Ordering::Greater,
+                ),
+                (
+                    LibcVersion::new(1, 0, 123),
+                    LibcVersion::new(1, 0, 0),
+                    Ordering::Greater,
+                ),
+                (
+                    LibcVersion::new(1, 0, 0),
+                    LibcVersion::new(1, 0, 0),
+                    Ordering::Equal,
+                ),
+                (
+                    LibcVersion::new(1, 123123123, 123123123),
+                    LibcVersion::new(2, 0, 0),
+                    Ordering::Less,
+                ),
+                (
+                    LibcVersion::new(1, 0, 0),
+                    LibcVersion::new(1, 123, 0),
+                    Ordering::Less,
+                ),
+                (
+                    LibcVersion::new(1, 0, 0),
+                    LibcVersion::new(1, 0, 123),
+                    Ordering::Less,
+                ),
+            ] {
+                let actual = a.cmp(&b);
+                assert_eq!(expected, actual)
+            }
+        }
     }
 }
 
